@@ -8,18 +8,33 @@
         return `${obj.name || ''}|${obj.clue || ''}|${obj.desc || ''}`;
     }
 
+    function previouslyCollectedKeys(bank, stageIndex) {
+        const keys = new Set();
+        if (!Array.isArray(state.taskOrder)) return keys;
+        for (let previousStage = 0; previousStage < stageIndex; previousStage++) {
+            const previousTaskIndex = state.taskOrder[previousStage];
+            const previousTask = bank[previousTaskIndex];
+            if (!previousTask || !Array.isArray(previousTask.correct)) continue;
+            previousTask.correct.forEach(obj => keys.add(dataKey(obj)));
+        }
+        return keys;
+    }
+
     function buildGrowingWrongData(bank, picked, stageIndex) {
         // 3 mission targets stay unchanged. Non-target biology data grows by one each level:
         // L1: 2, L2: 3, L3: 4, L4: 5, L5: 6  => total bio objects 5,6,7,8,9.
         const targetWrongCount = 2 + stageIndex;
         const currentCorrect = new Set(picked.correct.map(dataKey));
+        const alreadyCollected = previouslyCollectedKeys(bank, stageIndex);
         const seen = new Set();
         const result = [];
 
         const add = (obj) => {
             if (!obj || result.length >= targetWrongCount) return;
             const key = dataKey(obj);
-            if (!key || currentCorrect.has(key) || seen.has(key)) return;
+            // Do not show the current correct targets as distractors, and do not bring back
+            // concepts that the learner already collected in earlier levels of the same run.
+            if (!key || currentCorrect.has(key) || alreadyCollected.has(key) || seen.has(key)) return;
             seen.add(key);
             result.push({...obj});
         };
@@ -27,22 +42,18 @@
         // Keep the current level's own distractors first.
         picked.wrong.forEach(add);
 
-        // Then retain previously encountered biology data so knowledge accumulates as levels rise.
-        if (Array.isArray(state.taskOrder)) {
-            for (let previousStage = 0; previousStage < stageIndex && result.length < targetWrongCount; previousStage++) {
-                const previousTaskIndex = state.taskOrder[previousStage];
-                const previousTask = bank[previousTaskIndex];
-                if (!previousTask) continue;
-                previousTask.correct.forEach(add);
-                previousTask.wrong.forEach(add);
-            }
-        }
-
-        // Safety fallback only if a topic has too much overlap; still uses data from the same topic bank.
+        // Add only other distractor data from the same topic bank. Previous correct answers
+        // are deliberately excluded so Level 1 collected concepts do not reappear in Level 2+.
         if (result.length < targetWrongCount) {
             bank.forEach(task => {
-                task.correct.forEach(add);
-                task.wrong.forEach(add);
+                (task.wrong || []).forEach(add);
+            });
+        }
+
+        // Last-resort same-topic fill: use not-yet-collected concepts only.
+        if (result.length < targetWrongCount) {
+            bank.forEach(task => {
+                (task.correct || []).forEach(add);
             });
         }
 
@@ -63,7 +74,6 @@
         const lvl = levels[state.level - 1];
         const stageIndex = Math.max(0, Math.min(MAX_GRADE_LEVEL - 1, (state.gradeLevel || 1) - 1));
 
-        // Mission targets and questions are unchanged; only the amount of topic data increases.
         lvl.mission = picked.mission;
         lvl.correct = picked.correct.map(x => ({...x}));
         lvl.wrong = buildGrowingWrongData(bank, picked, stageIndex);
