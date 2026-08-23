@@ -28,11 +28,11 @@
       try {
         if (isGrade6Now() && Array.isArray(map) && map.length && map[0] && typeof tileSize === 'number' && canvas) {
           const mazeWidth = map[0].length * tileSize;
-          const mazeHeight = map.length * tileSize;
           const expectedX = (canvas.width - mazeWidth) / 2;
-          const expectedY = Math.max(120, (canvas.height - mazeHeight) / 2 + 40);
 
-          if (Math.abs(Number(x) - expectedX) < 0.75 && Math.abs(Number(y) - expectedY) < 0.75) {
+          // The maze renderer is the centered translate call. Match by X only because
+          // the Y value can be changed by the separate visual-position patch.
+          if (Math.abs(Number(x) - expectedX) < 0.75 && Number(y) > 80) {
             currentTranslate(x, y);
             nativeTranslate.call(ctx, -(mazeWidth * (SCALE - 1)) / 2, 0);
             nativeScale.call(ctx, SCALE, SCALE);
