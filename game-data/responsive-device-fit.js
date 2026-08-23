@@ -78,7 +78,7 @@
       #knowledge-bonus-status { top:48px!important; font-size:10px!important; padding:4px 8px!important; }
     }
 
-    /* Phone portrait */
+    /* Phone portrait — gameplay fit only */
     @media (max-width: 600px) and (orientation: portrait) {
       #game-ui > .absolute.top-2 {
         top:4px!important; left:5px!important; right:5px!important; align-items:flex-start!important;
@@ -88,27 +88,37 @@
       #hud-level { font-size:14px!important; }
       #hud-lives, #hud-score { font-size:14px!important; }
       #bio-level-timer { font-size:9px!important; margin-left:5px!important; padding-left:5px!important; }
+
+      /* Keep the right-side control strip compact and on one line. */
       #game-ui > .absolute.top-2 .flex.gap-2 {
-        gap:4px!important; flex-wrap:wrap!important; justify-content:flex-end!important; max-width:58vw!important;
+        gap:3px!important; flex-wrap:nowrap!important; justify-content:flex-end!important;
+        max-width:none!important; transform:scale(.78); transform-origin:top right;
       }
       #btn-inventory-top, #btn-hint, #btn-sound, #movement-speed-control {
-        min-height:38px!important; min-width:38px!important; border-radius:12px!important; font-size:16px!important;
+        min-height:36px!important; min-width:36px!important; border-radius:11px!important; font-size:15px!important;
       }
-      #movement-speed-control { height:38px!important; }
-      #movement-speed-control button { font-size:14px!important; padding:0 4px!important; }
-      #movement-speed-control span { min-width:32px!important; font-size:9px!important; }
-      #btn-exit { min-height:38px!important; min-width:38px!important; width:38px!important; padding:0!important; border-radius:12px!important; }
+      #movement-speed-control { height:36px!important; }
+      #movement-speed-control button { font-size:13px!important; padding:0 4px!important; }
+      #movement-speed-control span { min-width:30px!important; font-size:8px!important; }
+      #btn-exit { min-height:36px!important; min-width:36px!important; width:36px!important; padding:0!important; border-radius:11px!important; }
       #btn-exit .exit-label { display:none!important; }
-      #game-ui > .absolute.top-16 { top:92px!important; width:calc(100vw - 10px)!important; }
+
+      /* Mission stays directly under the compact HUD. */
+      #game-ui > .absolute.top-16 { top:84px!important; width:calc(100vw - 10px)!important; }
       #game-ui > .absolute.top-16 > .hud-panel { padding:7px 8px!important; border-radius:14px!important; }
       #hud-mission-title { font-size:10px!important; }
       #hud-mission-text { font-size:9px!important; line-height:1.25!important; }
       #hud-keys, #hud-progress { font-size:10px!important; }
-      #scanner-btn-container { right:8px!important; bottom:132px!important; gap:5px!important; }
+
+      /* Move only the rendered gameplay canvas upward to remove the large blank gap.
+         This is a visual CSS translation only; canvas data/collision coordinates are untouched. */
+      #game-ui canvas { transform:translateY(-255px)!important; transform-origin:center top!important; }
+
+      #scanner-btn-container { right:8px!important; bottom:calc(140px + env(safe-area-inset-bottom))!important; gap:5px!important; }
       #btn-scan { width:56px!important; height:56px!important; border-radius:16px!important; }
-      #d-pad { right:4px!important; bottom:5px!important; transform:scale(.72); transform-origin:bottom right; }
-      #background-view-toggle { transform:scale(.72); transform-origin:bottom left; left:8px!important; bottom:8px!important; }
-      #knowledge-bonus-status { top:90px!important; font-size:9px!important; padding:4px 7px!important; }
+      #d-pad { right:4px!important; bottom:calc(14px + env(safe-area-inset-bottom))!important; transform:scale(.72); transform-origin:bottom right; }
+      #background-view-toggle { transform:scale(.72); transform-origin:bottom left; left:8px!important; bottom:calc(12px + env(safe-area-inset-bottom))!important; }
+      #knowledge-bonus-status { top:82px!important; font-size:9px!important; padding:4px 7px!important; }
     }
   `;
   document.head.appendChild(style);
