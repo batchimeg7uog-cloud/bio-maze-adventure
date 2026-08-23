@@ -6,7 +6,9 @@
     const SPEEDS = [
         { label: '0.8×', value: 0.12, title: 'Удаан' },
         { label: '1.0×', value: 0.15, title: 'Хэвийн' },
-        { label: '1.25×', value: 0.1875, title: 'Хурдан' }
+        { label: '1.25×', value: 0.1875, title: 'Хурдан' },
+        { label: '1.4×', value: 0.21, title: 'Маш хурдан' },
+        { label: '1.5×', value: 0.225, title: 'Хамгийн хурдан' }
     ];
 
     let speedIndex = 1;
