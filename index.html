@@ -7,5 +7,5 @@
 <script src="game-data/part-5.js"></script>
 <script src="game-data/part-6.js"></script>
 <script>
-(async()=>{try{const b64=window.__BIO_MAZE_GZIP||'';const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);const ds=new DecompressionStream('gzip');const html=await new Response(new Blob([bytes]).stream().pipeThrough(ds)).text();document.open();document.write(html);document.close()}catch(e){document.getElementById('loading').textContent='Тоглоом ачаалахад алдаа гарлаа: '+e.message}})();
+(async()=>{try{const b64=window.__BIO_MAZE_GZIP||'';const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);const ds=new DecompressionStream('gzip');const html=await new Response(new Blob([bytes]).stream().pipeThrough(ds)).text();const patched=html.replace('</body>','<script src="/game-data/progression-5level.js"><\/script></body>');document.open();document.write(patched);document.close()}catch(e){document.getElementById('loading').textContent='Тоглоом ачаалахад алдаа гарлаа: '+e.message}})();
 </script></body></html>
