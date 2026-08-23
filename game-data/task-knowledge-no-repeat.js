@@ -1,7 +1,6 @@
-// KNOWLEDGE TASK PRESENTATION ONLY.
+// KNOWLEDGE TASK PRESENTATION + WITHIN-RUN DISTINCT BASE TASKS ONLY.
 // Keeps the existing maze, 3 correct collectibles, 3 lives, Level 1→5,
 // growing distractor count, scoring, audio, save/resume, no-repeat history and UI unchanged.
-// Restores concise “find 3 related concepts” missions; learning information stays on the objects.
 (() => {
     const TASKS_PER_RUN = 5;
     const originalGetSelectedTaskBank = getSelectedTaskBank;
@@ -31,7 +30,6 @@
         };
     }
 
-    // Keep textbook terminology consistent in labels, learning information and distractors.
     if (window.__B5C) {
         Object.keys(window.__B5C).forEach(key => {
             const row = window.__B5C[key];
@@ -54,6 +52,7 @@
     const perms = [
         [0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]
     ];
+    const VARIANTS_PER_BASE = perms.length * 3; // 18
 
     function rotate(arr, n) {
         if (!arr.length) return [];
@@ -63,16 +62,12 @@
 
     function buildKnowledgeBank(baseBank) {
         if (!Array.isArray(baseBank) || !baseBank.length) return baseBank;
-
-        // Preserve the reviewed scientific grouping of each task.
-        // Variants affect order/door focus only; the visible mission stays concise like the original game.
-        const variantsPerBase = perms.length * 3;
-        const total = baseBank.length * variantsPerBase;
+        const total = baseBank.length * VARIANTS_PER_BASE;
 
         const makeTask = index => {
             index = Math.max(0, Math.min(total - 1, Number(index) || 0));
-            const baseIndex = Math.floor(index / variantsPerBase);
-            let rem = index % variantsPerBase;
+            const baseIndex = Math.floor(index / VARIANTS_PER_BASE);
+            let rem = index % VARIANTS_PER_BASE;
             const doorFocus = rem % 3;
             rem = Math.floor(rem / 3);
             const perm = perms[rem % perms.length];
@@ -87,7 +82,6 @@
             const opts = rotate([focus.name, ...(distractors.map(o => o.name))].slice(0, 3), index % 3);
 
             return {
-                // Short mission only. Object clue/desc remains intact so information appears while exploring.
                 mission: normalizeText(src.mission),
                 correct: orderedCorrect,
                 wrong,
@@ -100,9 +94,9 @@
         };
 
         let proxy = null;
-        proxy = new Proxy({length: total, __knowledgeBank: true}, {
+        proxy = new Proxy({length: total, __knowledgeBank: true, __baseTaskCount: baseBank.length}, {
             get(obj, prop) {
-                if (prop === 'length' || prop === '__knowledgeBank') return obj[prop];
+                if (prop === 'length' || prop === '__knowledgeBank' || prop === '__baseTaskCount') return obj[prop];
                 if (prop === 'forEach') return callback => {
                     const limit = Math.min(total, 250);
                     for (let i = 0; i < limit; i++) callback(makeTask(i), i, proxy);
@@ -143,24 +137,53 @@
         try { localStorage.setItem(historyStorageKey(), JSON.stringify([...seen])); } catch (_) {}
     }
 
-    function pickUnseen(limit, seen, count) {
-        const available = [];
-        for (let i = 0; i < limit; i++) if (!seen.has(i)) available.push(i);
-        for (let i = available.length - 1; i > 0; i--) {
+    function shuffled(arr) {
+        const out = [...arr];
+        for (let i = out.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [available[i], available[j]] = [available[j], available[i]];
+            [out[i], out[j]] = [out[j], out[i]];
         }
-        return available.slice(0, count);
+        return out;
+    }
+
+    function pickOneUnseenFromBase(baseIndex, bankLength, seen) {
+        const start = baseIndex * VARIANTS_PER_BASE;
+        const end = Math.min(bankLength, start + VARIANTS_PER_BASE);
+        const candidates = [];
+        for (let id = start; id < end; id++) if (!seen.has(id)) candidates.push(id);
+        if (!candidates.length) return null;
+        return candidates[Math.floor(Math.random() * candidates.length)];
     }
 
     makeTaskOrder = function(bankLength) {
         if (!bankLength) return [];
         const seen = readHistory(bankLength);
-        const order = pickUnseen(bankLength, seen, TASKS_PER_RUN);
-        if (order.length < TASKS_PER_RUN) {
-            console.warn('Bio Maze: unused knowledge-task variants are exhausted for this student/grade/topic.');
+        const baseCount = Math.floor(bankLength / VARIANTS_PER_BASE);
+
+        // One task from each reviewed base group per 5-level run.
+        // This prevents Level 1 and Level 2 (or any two levels in the same run)
+        // from being merely different variants of the same 3 target concepts.
+        if (baseCount >= TASKS_PER_RUN) {
+            const baseOrder = shuffled(Array.from({length: baseCount}, (_, i) => i)).slice(0, TASKS_PER_RUN);
+            const order = [];
+            for (const baseIndex of baseOrder) {
+                const id = pickOneUnseenFromBase(baseIndex, bankLength, seen);
+                if (id === null) {
+                    console.warn('Bio Maze: unused knowledge-task variants are exhausted for one base task.');
+                    return [];
+                }
+                order.push(id);
+            }
+            order.forEach(id => seen.add(id));
+            writeHistory(seen);
             return order;
         }
+
+        // Fallback for any unexpected bank shape.
+        const available = [];
+        for (let i = 0; i < bankLength; i++) if (!seen.has(i)) available.push(i);
+        const order = shuffled(available).slice(0, TASKS_PER_RUN);
+        if (order.length < TASKS_PER_RUN) return order;
         order.forEach(id => seen.add(id));
         writeHistory(seen);
         return order;
