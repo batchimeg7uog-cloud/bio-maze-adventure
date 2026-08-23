@@ -1,28 +1,38 @@
 // BACKGROUND VIEW TOGGLE ONLY.
-// Adds a dark/white background viewing control. No game rules, logic, content,
-// scoring, movement, maze, icons, controls, progression, audio or save data are changed.
+// Adds a dark/white base-background viewing control. No game rules, task data,
+// scoring, movement, maze geometry/tiles, icons, progression, audio or save logic are changed.
 (() => {
   const STYLE_ID = 'bio-background-view-toggle-style';
   const BUTTON_ID = 'bio-background-view-toggle';
   const STORAGE_KEY = 'bioMazeBackgroundViewV1';
+  const WHITE_BG = '#f8fafc';
 
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      html.bio-bg-white body{background:#ffffff!important;}
+      html.bio-bg-white,
+      html.bio-bg-white body{background:${WHITE_BG}!important;}
+      html.bio-bg-white .overlay{background:rgba(248,250,252,.96)!important;}
+
       #${BUTTON_ID}{
-        min-width:54px;height:54px;padding:0 10px;border-radius:18px;
-        display:inline-flex;align-items:center;justify-content:center;gap:5px;
-        background:rgba(6,19,28,.91);border:1px solid rgba(125,211,252,.26);
-        box-shadow:0 10px 22px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08);
-        color:#fff;font-weight:900;font-size:20px;cursor:pointer;user-select:none;
+        position:fixed;left:18px;bottom:18px;z-index:10080;
+        width:50px;height:50px;padding:0;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        background:rgba(6,19,28,.94);border:1px solid rgba(125,211,252,.38);
+        box-shadow:0 10px 24px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.10);
+        color:#fff;font-size:22px;cursor:pointer;user-select:none;
+        transition:transform .15s ease,box-shadow .15s ease;
+        pointer-events:auto;
       }
-      #${BUTTON_ID}:hover{transform:translateY(-1px);}
-      #${BUTTON_ID} .bio-bg-label{font-size:10px;line-height:1;font-weight:1000;letter-spacing:.02em;}
+      #${BUTTON_ID}:hover{transform:translateY(-2px);box-shadow:0 13px 28px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.12);}
+      #${BUTTON_ID}:active{transform:translateY(0) scale(.96);}
+      html.bio-bg-white #${BUTTON_ID}{
+        background:rgba(255,255,255,.96);color:#0f172a;
+        border-color:rgba(15,23,42,.22);box-shadow:0 10px 24px rgba(15,23,42,.18);
+      }
       @media (max-width:820px){
-        #${BUTTON_ID}{min-width:46px;height:46px;border-radius:16px;padding:0 7px;font-size:18px;}
-        #${BUTTON_ID} .bio-bg-label{display:none;}
+        #${BUTTON_ID}{left:12px;bottom:12px;width:44px;height:44px;font-size:20px;}
       }
     `;
     document.head.appendChild(style);
@@ -34,14 +44,26 @@
     if (saved === 'white' || saved === 'dark') mode = saved;
   } catch (_) {}
 
+  const originalLevelBackgrounds = new WeakMap();
+
+  const applyCanvasBaseBackground = () => {
+    try {
+      if (!Array.isArray(levels)) return;
+      levels.forEach(lvl => {
+        if (!lvl || !lvl.colors) return;
+        if (!originalLevelBackgrounds.has(lvl)) originalLevelBackgrounds.set(lvl, lvl.colors.bg);
+        lvl.colors.bg = mode === 'white' ? WHITE_BG : originalLevelBackgrounds.get(lvl);
+      });
+    } catch (_) {}
+  };
+
   const applyMode = () => {
     document.documentElement.classList.toggle('bio-bg-white', mode === 'white');
+    applyCanvasBaseBackground();
     const btn = document.getElementById(BUTTON_ID);
     if (btn) {
-      btn.innerHTML = mode === 'white'
-        ? '<span aria-hidden="true">☀️</span><span class="bio-bg-label">ЦАГААН</span>'
-        : '<span aria-hidden="true">🌙</span><span class="bio-bg-label">ХАР</span>';
-      btn.title = mode === 'white' ? 'Дэвсгэрийг хар болгох' : 'Дэвсгэрийг цагаан болгох';
+      btn.textContent = mode === 'white' ? '☀️' : '🌙';
+      btn.title = mode === 'white' ? 'Хар дэвсгэрээр харах' : 'Цагаан дэвсгэрээр харах';
       btn.setAttribute('aria-label', btn.title);
     }
   };
@@ -53,25 +75,26 @@
   };
 
   const installButton = () => {
-    if (document.getElementById(BUTTON_ID)) return true;
-    const sound = document.getElementById('btn-sound');
-    if (!sound || !sound.parentElement) return false;
-
-    const btn = document.createElement('button');
+    let btn = document.getElementById(BUTTON_ID);
+    if (btn) {
+      // Remove the old top-HUD placement if this script is refreshed in-place.
+      if (btn.parentElement !== document.body) document.body.appendChild(btn);
+      applyMode();
+      return true;
+    }
+    if (!document.body) return false;
+    btn = document.createElement('button');
     btn.type = 'button';
     btn.id = BUTTON_ID;
     btn.addEventListener('click', toggle);
-    sound.parentElement.insertBefore(btn, sound);
+    document.body.appendChild(btn);
     applyMode();
     return true;
   };
 
   applyMode();
-  if (!installButton()) {
-    let tries = 0;
-    const timer = setInterval(() => {
-      tries += 1;
-      if (installButton() || tries > 40) clearInterval(timer);
-    }, 250);
-  }
+  installButton();
+
+  // Keep only the base background synced if grade/level data is rebuilt later.
+  setInterval(applyCanvasBaseBackground, 800);
 })();
