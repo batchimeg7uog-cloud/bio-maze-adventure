@@ -1,0 +1,1 @@
+window.__B5T=(m,c,w,i)=>{const C=window.__B5C,O=k=>({type:C[k][0],emoji:C[k][1],name:C[k][2],clue:C[k][3],desc:C[k][3]}),a=c.map(O),b=w.map(O),t=C[c[0]],q=t[3]+" Энэ нь аль нь вэ?",o=[t[2],C[w[0]][2],C[w[1]][2]],r=i%3,p=o.slice(r).concat(o.slice(0,r));return{mission:m,correct:a,wrong:b,doorQ:q,doorOpts:p,doorAns:p.indexOf(t[2])}};
