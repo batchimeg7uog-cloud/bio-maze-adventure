@@ -7,7 +7,9 @@
     if (!el) return;
     const txt = String(el.textContent || '').trim();
     const m = txt.match(/^(?:LVL|level)\s*(\d+)$/i);
-    if (m) el.textContent = `level ${m[1]}`;
+    if (!m) return;
+    const next = `level ${m[1]}`;
+    if (txt !== next) el.textContent = next;
   };
 
   apply();
@@ -15,5 +17,4 @@
   if (target) {
     new MutationObserver(apply).observe(target, { childList: true, subtree: true, characterData: true });
   }
-  setInterval(apply, 500);
 })();
