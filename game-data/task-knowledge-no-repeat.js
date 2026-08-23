@@ -1,7 +1,7 @@
-// KNOWLEDGE TASK MODE ONLY.
+// KNOWLEDGE TASK PRESENTATION ONLY.
 // Keeps the existing maze, 3 correct collectibles, 3 lives, Level 1→5,
-// growing distractor count, scoring, audio, save/resume and UI unchanged.
-// Replaces game-like word prompts with knowledge clues based on the vetted task content.
+// growing distractor count, scoring, audio, save/resume, no-repeat history and UI unchanged.
+// Restores concise “find 3 related concepts” missions; learning information stays on the objects.
 (() => {
     const TASKS_PER_RUN = 5;
     const originalGetSelectedTaskBank = getSelectedTaskBank;
@@ -31,7 +31,7 @@
         };
     }
 
-    // Normalize the shared catalog too, so distractors and labels use the same textbook terminology.
+    // Keep textbook terminology consistent in labels, learning information and distractors.
     if (window.__B5C) {
         Object.keys(window.__B5C).forEach(key => {
             const row = window.__B5C[key];
@@ -44,20 +44,12 @@
     function clueFor(obj) {
         const o = normalizeObject(obj);
         let clue = (o.clue || o.desc || '').trim();
-        // A knowledge clue must not reveal the answer itself.
         if (o.name) {
             const escaped = o.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             clue = clue.replace(new RegExp(escaped, 'gi'), 'энэ ойлголт');
         }
         return clue || 'Тодорхойлолтод тохирох биологийн ойлголтыг сонго.';
     }
-
-    const missionFrames = [
-        clues => `Доорх 3 тодорхойлолтод тохирох 3 зөв хариултыг талбайгаас ол.<br>① ${clues[0]}<br>② ${clues[1]}<br>③ ${clues[2]}`,
-        clues => `Сурах бичгийн мэдлэгээ ашиглан 3 зөв ойлголтыг цуглуул.<br>① ${clues[0]}<br>② ${clues[1]}<br>③ ${clues[2]}`,
-        clues => `Дараах шинж, үүргийг уншаад тохирох 3 ойлголтыг ол.<br>① ${clues[0]}<br>② ${clues[1]}<br>③ ${clues[2]}`,
-        clues => `Тодорхойлолт бүрт тохирох хариултыг ялган ол. Нийт 3 зөв зүйл цуглуулна.<br>① ${clues[0]}<br>② ${clues[1]}<br>③ ${clues[2]}`
-    ];
 
     const perms = [
         [0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]
@@ -71,30 +63,32 @@
 
     function buildKnowledgeBank(baseBank) {
         if (!Array.isArray(baseBank) || !baseBank.length) return baseBank;
-        // Each reviewed base task keeps its own coherent set of 3 correct concepts.
-        // Variants change clue order/presentation and door focus, not the scientific grouping.
-        const variantsPerBase = perms.length * missionFrames.length * 3; // 72 per reviewed task
+
+        // Preserve the reviewed scientific grouping of each task.
+        // Variants affect order/door focus only; the visible mission stays concise like the original game.
+        const variantsPerBase = perms.length * 3;
         const total = baseBank.length * variantsPerBase;
 
         const makeTask = index => {
             index = Math.max(0, Math.min(total - 1, Number(index) || 0));
             const baseIndex = Math.floor(index / variantsPerBase);
             let rem = index % variantsPerBase;
-            const doorFocus = rem % 3; rem = Math.floor(rem / 3);
-            const frameIndex = rem % missionFrames.length; rem = Math.floor(rem / missionFrames.length);
+            const doorFocus = rem % 3;
+            rem = Math.floor(rem / 3);
             const perm = perms[rem % perms.length];
             const src = baseBank[baseIndex];
+
             const correctRaw = (src.correct || []).slice(0, 3).map(normalizeObject);
             const orderedCorrect = perm.map(i => correctRaw[i]);
-            const clues = orderedCorrect.map(clueFor);
             const wrong = (src.wrong || []).map(normalizeObject);
             const focus = orderedCorrect[doorFocus % orderedCorrect.length];
             const fallbackWrong = wrong.length >= 2 ? wrong : baseBank.flatMap(t => t.wrong || []).map(normalizeObject);
             const distractors = fallbackWrong.filter(o => o.name !== focus.name).slice(0, 2);
-            const opts = rotate([focus.name, ...(distractors.map(o => o.name))].slice(0,3), index % 3);
+            const opts = rotate([focus.name, ...(distractors.map(o => o.name))].slice(0, 3), index % 3);
 
             return {
-                mission: missionFrames[frameIndex](clues),
+                // Short mission only. Object clue/desc remains intact so information appears while exploring.
+                mission: normalizeText(src.mission),
                 correct: orderedCorrect,
                 wrong,
                 doorQ: clueFor(focus) + ' Аль ойлголт тохирох вэ?',
@@ -110,7 +104,6 @@
             get(obj, prop) {
                 if (prop === 'length' || prop === '__knowledgeBank') return obj[prop];
                 if (prop === 'forEach') return callback => {
-                    // Existing Level data-growth fallback only needs a bounded sample.
                     const limit = Math.min(total, 250);
                     for (let i = 0; i < limit; i++) callback(makeTask(i), i, proxy);
                 };
@@ -164,7 +157,6 @@
         if (!bankLength) return [];
         const seen = readHistory(bankLength);
         const order = pickUnseen(bankLength, seen, TASKS_PER_RUN);
-        // Never recycle an already played knowledge task silently.
         if (order.length < TASKS_PER_RUN) {
             console.warn('Bio Maze: unused knowledge-task variants are exhausted for this student/grade/topic.');
             return order;
