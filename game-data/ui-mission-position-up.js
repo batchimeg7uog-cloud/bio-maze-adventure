@@ -1,19 +1,16 @@
-// VISUAL POSITION ONLY: move the existing Level/Mission banner upward for every grade.
+// VISUAL POSITION ONLY: keep the existing Level/Mission banner clear of the top HUD.
 // No game rules, logic, tasks, scoring, movement, icons, controls or other UI are changed.
 (() => {
   const id = 'bio-mission-position-up';
   const existing = document.getElementById(id);
   if (existing) existing.remove();
 
-  const desktopTop = '58px';
-  const mobileTop = '54px';
+  const desktopTop = '82px';
+  const mobileTop = '70px';
 
   const style = document.createElement('style');
   style.id = id;
-  style.textContent = `
-    #game-ui #hud-mission-text{position:relative;}
-    @media (max-width:820px){}
-  `;
+  style.textContent = `#game-ui #hud-mission-text{position:relative;}`;
   document.head.appendChild(style);
 
   const findBanner = () => {
@@ -33,8 +30,5 @@
   setTimeout(applyPosition, 100);
   setTimeout(applyPosition, 400);
   setTimeout(applyPosition, 1000);
-
-  const observer = new MutationObserver(applyPosition);
-  observer.observe(document.body, {attributes:true, attributeFilter:['class'], childList:true, subtree:true});
   window.addEventListener('resize', applyPosition, {passive:true});
 })();
