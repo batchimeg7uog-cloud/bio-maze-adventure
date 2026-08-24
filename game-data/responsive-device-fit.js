@@ -237,6 +237,32 @@
         font-size:11px!important;
         padding:5px 9px!important;
       }
+
+      /* Start screen only: keep the current form/card sizes and allow natural vertical access. */
+      body.bio-mobile-start-scroll {
+        height:auto!important;
+        min-height:100dvh!important;
+        overflow-x:hidden!important;
+        overflow-y:auto!important;
+        -webkit-overflow-scrolling:touch;
+      }
+      body.bio-mobile-start-scroll [data-bio-mobile-start-scroll] {
+        max-height:none!important;
+        overflow-x:hidden!important;
+        padding-bottom:calc(32px + env(safe-area-inset-bottom, 0px))!important;
+        -webkit-overflow-scrolling:touch;
+      }
+      body.bio-mobile-start-scroll [data-bio-mobile-start-scroll]:not([data-bio-start-fixed="1"]) {
+        height:auto!important;
+        min-height:100dvh!important;
+        overflow-y:visible!important;
+      }
+      body.bio-mobile-start-scroll [data-bio-mobile-start-scroll][data-bio-start-fixed="1"] {
+        height:100dvh!important;
+        min-height:100dvh!important;
+        max-height:100dvh!important;
+        overflow-y:auto!important;
+      }
     }
 
     /* Phone landscape: compact but readable; canvas remains untransformed. */
@@ -321,4 +347,73 @@
     }
   `;
   document.head.appendChild(style);
+
+  // Start-screen scroll marker only. It is active only while the visible Start button exists on phone portrait.
+  const clearStartScrollMarker = () => {
+    document.body && document.body.classList.remove('bio-mobile-start-scroll');
+    document.querySelectorAll('[data-bio-mobile-start-scroll]').forEach((el) => {
+      el.removeAttribute('data-bio-mobile-start-scroll');
+      el.removeAttribute('data-bio-start-fixed');
+    });
+  };
+
+  const findVisibleStartButton = () => {
+    const candidates = document.querySelectorAll('button,[role="button"]');
+    for (const el of candidates) {
+      const text = String(el.textContent || '').replace(/\s+/g, ' ').trim().toUpperCase();
+      if (!text.includes('ТОГЛООМ ЭХЛҮҮЛЭХ')) continue;
+      const cs = getComputedStyle(el);
+      if (cs.display !== 'none' && cs.visibility !== 'hidden' && el.getClientRects().length) return el;
+    }
+    return null;
+  };
+
+  const findStartRoot = (button) => {
+    const explicit = button.closest('#start-screen,.start-screen,[data-screen="start"],[data-view="start"]');
+    if (explicit) return explicit;
+
+    let node = button.parentElement;
+    let best = node;
+    const vw = Math.max(1, window.innerWidth || 1);
+    while (node && node !== document.body) {
+      const rect = node.getBoundingClientRect();
+      if (rect.width >= vw * 0.82) best = node;
+      node = node.parentElement;
+    }
+    return best || button.parentElement;
+  };
+
+  const syncMobileStartScroll = () => {
+    clearStartScrollMarker();
+    if (!window.matchMedia('(max-width:600px) and (orientation:portrait)').matches) return;
+
+    const button = findVisibleStartButton();
+    if (!button || !document.body) return;
+
+    const root = findStartRoot(button);
+    if (!root) return;
+
+    root.setAttribute('data-bio-mobile-start-scroll', '1');
+    const position = getComputedStyle(root).position;
+    if (position === 'fixed' || position === 'absolute') {
+      root.setAttribute('data-bio-start-fixed', '1');
+    }
+    document.body.classList.add('bio-mobile-start-scroll');
+  };
+
+  let startScrollRaf = 0;
+  const scheduleStartScrollSync = () => {
+    if (startScrollRaf) cancelAnimationFrame(startScrollRaf);
+    startScrollRaf = requestAnimationFrame(() => {
+      startScrollRaf = 0;
+      syncMobileStartScroll();
+    });
+  };
+
+  scheduleStartScrollSync();
+  window.addEventListener('resize', scheduleStartScrollSync, {passive:true});
+  window.addEventListener('orientationchange', scheduleStartScrollSync, {passive:true});
+  if (document.body) {
+    new MutationObserver(scheduleStartScrollSync).observe(document.body, {childList:true, subtree:true});
+  }
 })();
