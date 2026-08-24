@@ -84,9 +84,11 @@
             );
 
             const scaledWidth = mazeWidth * fitScale;
-            const scaledHeight = mazeHeight * fitScale;
             const renderX = leftCanvas + Math.max(0, (availableWidth - scaledWidth) / 2);
-            const renderY = topCanvas + Math.max(0, (availableHeight - scaledHeight) / 2);
+
+            // Vertical flow is intentionally top-aligned for every grade:
+            // mission panel -> small shared gap -> maze. Shorter mazes are not vertically centered.
+            const renderY = topCanvas;
 
             originalTranslate(renderX, renderY);
             if (Math.abs(fitScale - 1) > 0.001) {
